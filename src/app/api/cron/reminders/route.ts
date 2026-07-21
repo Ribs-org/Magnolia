@@ -7,6 +7,9 @@ import { reminderEmail } from "@/lib/email/templates";
 // Vercel Cron llama este endpoint una vez al día (ver vercel.json) con el
 // header Authorization: Bearer $CRON_SECRET.
 export async function GET(req: NextRequest) {
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "CRON_SECRET no configurado" }, { status: 500 });
+  }
   if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -38,9 +41,11 @@ export async function GET(req: NextRequest) {
       modality: a.modality,
       meetingUrl: a.meeting_url,
     });
-    await sendEmail({ to: user.user.email, subject: mail.subject, html: mail.html });
-    await supabase.from("appointments").update({ reminder_sent_at: new Date().toISOString() }).eq("id", a.id);
-    sent++;
+    const sent_ok = await sendEmail({ to: user.user.email, subject: mail.subject, html: mail.html });
+    if (sent_ok) {
+      await supabase.from("appointments").update({ reminder_sent_at: new Date().toISOString() }).eq("id", a.id);
+      sent++;
+    }
   }
   return NextResponse.json({ sent });
 }
