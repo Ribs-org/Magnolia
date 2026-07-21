@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 const NAV_LINKS: { href: string; label: string; roles: Role[] }[] = [
   { href: "/panel", label: "Agenda", roles: ["professional", "admin"] },
-  { href: "/panel/disponibilidad", label: "Disponibilidad", roles: ["professional"] },
+  { href: "/panel/disponibilidad", label: "Disponibilidad", roles: ["professional", "admin"] },
   { href: "/panel/pacientes", label: "Pacientes", roles: ["admin"] },
   { href: "/panel/profesionales", label: "Profesionales", roles: ["admin"] },
   { href: "/panel/configuracion", label: "Configuración", roles: ["admin"] },
