@@ -1,6 +1,7 @@
 import { CENTER_TZ } from "@/lib/constants";
 import { StatusButtons } from "@/components/panel/status-buttons";
 import { NoteEditor } from "@/components/panel/note-editor";
+import { AdminAppointmentActions } from "@/components/panel/admin-appointment-actions";
 import type { AppointmentStatus, Modality } from "@/lib/types";
 
 export interface AgendaAppointment {
@@ -9,6 +10,7 @@ export interface AgendaAppointment {
   ends_at: string;
   modality: Modality;
   status: AppointmentStatus;
+  professional_id?: string;
   patient: { full_name: string; phone: string | null } | null;
   professional?: { full_name: string } | null;
 }
@@ -103,6 +105,16 @@ export function AgendaList({
                       <div className="mt-4 flex flex-wrap items-center gap-2">
                         {isPastOrToday && <StatusButtons appointmentId={appt.id} status={appt.status} />}
                         <NoteEditor appointmentId={appt.id} initialBody={notesByAppointment?.[appt.id] ?? ""} />
+                      </div>
+                    )}
+
+                    {role === "admin" && appt.status === "confirmed" && appt.professional_id && (
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <AdminAppointmentActions
+                          appointmentId={appt.id}
+                          professionalId={appt.professional_id}
+                          modality={appt.modality}
+                        />
                       </div>
                     )}
                   </div>

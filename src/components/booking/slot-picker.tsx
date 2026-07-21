@@ -64,12 +64,14 @@ export function SlotPicker({
   onSelect,
   selectedStartsAt,
   refreshKey,
+  leadMinutes,
 }: {
   professionalId: string;
   modality: Modality;
   onSelect: (slot: SelectedSlot) => void;
   selectedStartsAt?: string;
   refreshKey?: number;
+  leadMinutes?: number;
 }) {
   const [windowStart, setWindowStart] = useState(0);
   const [days, setDays] = useState<Record<string, Slot[]>>({});
@@ -88,7 +90,8 @@ export function SlotPicker({
       setLoading(true);
       setError(null);
     }
-    fetch(`/api/availability?professionalId=${encodeURIComponent(professionalId)}&from=${from}&to=${to}`)
+    const leadParam = leadMinutes !== undefined ? `&lead=${leadMinutes}` : "";
+    fetch(`/api/availability?professionalId=${encodeURIComponent(professionalId)}&from=${from}&to=${to}${leadParam}`)
       .then(async (res) => {
         if (!res.ok) throw new Error("request failed");
         return (await res.json()) as { days: Record<string, Slot[]> };
@@ -105,7 +108,7 @@ export function SlotPicker({
     return () => {
       activeRef.current = false;
     };
-  }, [professionalId, from, to, refreshKey]);
+  }, [professionalId, from, to, refreshKey, leadMinutes]);
 
   const entries = useMemo(() => {
     return Object.entries(days)

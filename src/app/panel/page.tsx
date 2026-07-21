@@ -6,6 +6,7 @@ import { getPanelContext } from "@/lib/panel";
 import { createClient } from "@/lib/supabase/server";
 import { CENTER_TZ } from "@/lib/constants";
 import { AgendaList, type AgendaAppointment } from "@/components/panel/agenda-list";
+import { AdminAppointmentDialog, type AdminAppointmentProfessional } from "@/components/panel/admin-appointment-dialog";
 
 export const metadata: Metadata = { title: "Agenda" };
 
@@ -75,7 +76,7 @@ export default async function PanelAgendaPage({ searchParams }: Props) {
       .from("appointments")
       .select(
         role === "admin"
-          ? "id, starts_at, ends_at, modality, status, patient:profiles(full_name, phone), professional:professionals(full_name)"
+          ? "id, starts_at, ends_at, modality, status, professional_id, patient:profiles(full_name, phone), professional:professionals(full_name)"
           : "id, starts_at, ends_at, modality, status, patient:profiles(full_name, phone)"
       )
       .gte("starts_at", rangeStart)
@@ -88,6 +89,17 @@ export default async function PanelAgendaPage({ searchParams }: Props) {
 
     const { data } = await query;
     appointments = (data ?? []) as unknown as AgendaAppointment[];
+  }
+
+  let adminProfessionals: AdminAppointmentProfessional[] = [];
+  if (role === "admin") {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("professionals")
+      .select("id, full_name, modalities")
+      .eq("is_active", true)
+      .order("full_name", { ascending: true });
+    adminProfessionals = (data ?? []) as AdminAppointmentProfessional[];
   }
 
   let notesByAppointment: Record<string, string> | undefined;
@@ -105,25 +117,28 @@ export default async function PanelAgendaPage({ searchParams }: Props) {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-heading text-3xl text-ink">Agenda</h1>
-        <div className="flex items-center gap-1 text-sm">
-          <Link
-            href={hrefFor(prevFecha)}
-            className="rounded-full border border-ink/15 px-3 py-1.5 text-ink/70 transition hover:bg-ink/5"
-          >
-            ‹
-          </Link>
-          <Link
-            href={hrefFor(todayFecha)}
-            className="rounded-full border border-ink/15 px-4 py-1.5 text-ink/70 transition hover:bg-ink/5"
-          >
-            Hoy
-          </Link>
-          <Link
-            href={hrefFor(nextFecha)}
-            className="rounded-full border border-ink/15 px-3 py-1.5 text-ink/70 transition hover:bg-ink/5"
-          >
-            ›
-          </Link>
+        <div className="flex items-center gap-3">
+          {role === "admin" && <AdminAppointmentDialog professionals={adminProfessionals} />}
+          <div className="flex items-center gap-1 text-sm">
+            <Link
+              href={hrefFor(prevFecha)}
+              className="rounded-full border border-ink/15 px-3 py-1.5 text-ink/70 transition hover:bg-ink/5"
+            >
+              ‹
+            </Link>
+            <Link
+              href={hrefFor(todayFecha)}
+              className="rounded-full border border-ink/15 px-4 py-1.5 text-ink/70 transition hover:bg-ink/5"
+            >
+              Hoy
+            </Link>
+            <Link
+              href={hrefFor(nextFecha)}
+              className="rounded-full border border-ink/15 px-3 py-1.5 text-ink/70 transition hover:bg-ink/5"
+            >
+              ›
+            </Link>
+          </div>
         </div>
       </div>
 
