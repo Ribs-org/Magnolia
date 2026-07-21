@@ -8,7 +8,7 @@ type TeamPreviewMember = {
   slug: string;
   specialty: Specialty;
   photo_url: string | null;
-  profile: { full_name: string } | { full_name: string }[] | null;
+  full_name: string;
 };
 
 const SPECIALTY_LABEL: Record<Specialty, string> = {
@@ -34,11 +34,6 @@ const STEPS = [
   },
 ];
 
-function fullNameOf(profile: TeamPreviewMember["profile"]) {
-  if (!profile) return "";
-  return Array.isArray(profile) ? profile[0]?.full_name ?? "" : profile.full_name;
-}
-
 function initialsOf(name: string) {
   return name
     .split(" ")
@@ -52,7 +47,7 @@ export default async function HomePage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("professionals")
-    .select("id, slug, specialty, photo_url, profile:profiles(full_name)")
+    .select("id, slug, specialty, photo_url, full_name")
     .eq("is_active", true)
     .limit(4);
   const team = (data ?? []) as TeamPreviewMember[];
@@ -159,7 +154,7 @@ export default async function HomePage() {
             <h2 className="text-center font-heading text-3xl text-ink">Nuestro equipo</h2>
             <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               {team.map((member) => {
-                const name = fullNameOf(member.profile);
+                const name = member.full_name;
                 return (
                   <Link
                     key={member.id}

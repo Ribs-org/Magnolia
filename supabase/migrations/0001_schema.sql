@@ -41,6 +41,7 @@ $$ select role::text from public.profiles where id = auth.uid() $$;
 create table public.professionals (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null unique references public.profiles(id) on delete cascade,
+  full_name text not null default '',
   slug text not null unique,
   specialty public.specialty not null,
   photo_url text,
@@ -240,4 +241,4 @@ create policy "settings admin write" on public.settings for all using (public.my
 
 -- Column-level hardening: ni anon ni authenticated leen meeting_url de professionals
 revoke select on public.professionals from anon, authenticated;
-grant select (id, profile_id, slug, specialty, photo_url, bio, modalities, session_duration_min, session_price, is_active, created_at) on public.professionals to anon, authenticated;
+grant select (id, profile_id, full_name, slug, specialty, photo_url, bio, modalities, session_duration_min, session_price, is_active, created_at) on public.professionals to anon, authenticated;

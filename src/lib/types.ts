@@ -6,7 +6,7 @@ export type AppointmentStatus =
 
 export interface Profile { id: string; full_name: string; rut: string | null; phone: string | null; role: Role; email?: string }
 export interface Professional {
-  id: string; profile_id: string; slug: string; specialty: Specialty;
+  id: string; profile_id: string; full_name: string; slug: string; specialty: Specialty;
   photo_url: string | null; bio: string; modalities: Modality[];
   session_duration_min: number; session_price: number; meeting_url: string | null; is_active: boolean;
   profile?: Profile;
