@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
+function safeNext(value: FormDataEntryValue | null, fallback: string): string {
+  return typeof value === "string" && /^\/(?!\/)/.test(value) ? value : fallback;
+}
+
 const credentials = z.object({ email: z.string().email("Email inválido"), password: z.string().min(8, "Mínimo 8 caracteres") });
 
 export async function signIn(_prev: unknown, formData: FormData) {
@@ -11,7 +15,7 @@ export async function signIn(_prev: unknown, formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: "Email o contraseña incorrectos" };
-  redirect((formData.get("next") as string) || "/mi-cuenta");
+  redirect(safeNext(formData.get("next"), "/mi-cuenta"));
 }
 
 const signUpSchema = credentials.extend({
@@ -26,8 +30,11 @@ export async function signUp(_prev: unknown, formData: FormData) {
   const { email, password, full_name, rut, phone } = parsed.data;
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name, rut, phone } } });
-  if (error) return { error: "No se pudo crear la cuenta: " + error.message };
-  redirect((formData.get("next") as string) || "/mi-cuenta");
+  if (error) {
+    console.error("[auth] signUp:", error.message);
+    return { error: "No se pudo crear la cuenta. Verifica tus datos o intenta iniciar sesión." };
+  }
+  redirect(safeNext(formData.get("next"), "/mi-cuenta"));
 }
 
 export async function signOut() {
