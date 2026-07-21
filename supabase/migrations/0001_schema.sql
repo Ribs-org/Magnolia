@@ -205,11 +205,11 @@ end; $$;
 create trigger appointments_guard_update before update on public.appointments
   for each row execute function public.guard_appointment_update();
 
--- Copia el link de videollamada del profesional al crear una cita online
+-- Copia (autoritativamente) el link de videollamada del profesional al crear una cita online
 create or replace function public.set_appointment_meeting_url() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  if new.modality = 'online' and new.meeting_url is null then
+  if new.modality = 'online' then
     select meeting_url into new.meeting_url from public.professionals where id = new.professional_id;
   end if;
   return new;
