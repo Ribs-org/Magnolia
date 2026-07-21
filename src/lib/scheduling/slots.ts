@@ -16,7 +16,8 @@ interface Options {
 }
 
 function toUtc(date: string, time: string, tz: string): number {
-  return fromZonedTime(`${date}T${time}:00`, tz).getTime();
+  // Postgres `time` llega como "HH:MM:SS"; los formularios usan "HH:MM"
+  return fromZonedTime(`${date}T${time.slice(0, 5)}:00`, tz).getTime();
 }
 
 function ruleModalities(m: AvailabilityRule["modality"]): Modality[] {

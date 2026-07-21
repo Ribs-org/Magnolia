@@ -11,6 +11,16 @@ const base = {
 };
 
 describe("computeDaySlots", () => {
+  test("accepts Postgres HH:MM:SS time format (regression)", () => {
+    const slots = computeDaySlots({
+      ...base,
+      rules: [{ ...base.rules[0], start_time: "10:00:00", end_time: "13:00:00" }],
+    });
+    expect(slots.map(s => s.startsAt)).toEqual([
+      "2026-08-03T14:00:00.000Z", "2026-08-03T15:00:00.000Z", "2026-08-03T16:00:00.000Z",
+    ]);
+  });
+
   test("generates consecutive slots from a rule", () => {
     const slots = computeDaySlots(base);
     expect(slots.map(s => s.startsAt)).toEqual([
