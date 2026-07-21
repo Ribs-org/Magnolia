@@ -8,6 +8,10 @@ interface EmailTemplate {
   html: string;
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function formatDateEs(iso: string): string {
   const formatted = formatInTimeZone(iso, CENTER_TZ, "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es });
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
@@ -15,11 +19,11 @@ function formatDateEs(iso: string): string {
 
 function modalityLine(modality: Modality, meetingUrl?: string | null): string {
   if (modality === "online") {
-    return meetingUrl
-      ? `Es una sesión online. Puedes unirte con este link: <a href="${meetingUrl}" style="color:#465A4B;">${meetingUrl}</a>`
-      : "Es una sesión online. Te enviaremos el link antes de la sesión.";
+    if (!meetingUrl) return "Es una sesión online. Te enviaremos el link antes de la sesión.";
+    const safeUrl = escapeHtml(meetingUrl);
+    return `Es una sesión online. Puedes unirte con este link: <a href="${safeUrl}" style="color:#465A4B;">${safeUrl}</a>`;
   }
-  return `Es una sesión presencial, en nuestra dirección: ${CENTER_ADDRESS}.`;
+  return `Es una sesión presencial, en nuestra dirección: ${escapeHtml(CENTER_ADDRESS)}.`;
 }
 
 function shell(heading: string, bodyHtml: string): string {
@@ -44,8 +48,8 @@ export function bookingConfirmedEmail(args: {
   const when = formatDateEs(startsAt);
   const html = shell(
     "Tu reserva está confirmada",
-    `<p>Hola ${patientName},</p>
-     <p>Tu sesión con <strong>${professionalName}</strong> quedó confirmada para el <strong>${when}</strong>.</p>
+    `<p>Hola ${escapeHtml(patientName)},</p>
+     <p>Tu sesión con <strong>${escapeHtml(professionalName)}</strong> quedó confirmada para el <strong>${when}</strong>.</p>
      <p>${modalityLine(modality, meetingUrl)}</p>
      <p>Si necesitas cancelar o reagendar, puedes hacerlo desde tu cuenta.</p>`
   );
@@ -63,8 +67,8 @@ export function bookingCancelledEmail(args: {
   const who = cancelledBy === "patient" ? "Cancelaste" : `El equipo de ${CENTER_NAME} canceló`;
   const html = shell(
     "Tu reserva fue cancelada",
-    `<p>Hola ${patientName},</p>
-     <p>${who} la sesión con <strong>${professionalName}</strong> que estaba agendada para el <strong>${when}</strong>.</p>
+    `<p>Hola ${escapeHtml(patientName)},</p>
+     <p>${who} la sesión con <strong>${escapeHtml(professionalName)}</strong> que estaba agendada para el <strong>${when}</strong>.</p>
      <p>Si fue un error o quieres agendar una nueva hora, puedes hacerlo desde tu cuenta.</p>`
   );
   return { subject: "Tu reserva en Magnolia fue cancelada", html };
@@ -83,8 +87,8 @@ export function bookingRescheduledEmail(args: {
   const newWhen = formatDateEs(newStartsAt);
   const html = shell(
     "Tu reserva fue reagendada",
-    `<p>Hola ${patientName},</p>
-     <p>Tu sesión con <strong>${professionalName}</strong> se movió del ${oldWhen} al <strong>${newWhen}</strong>.</p>
+    `<p>Hola ${escapeHtml(patientName)},</p>
+     <p>Tu sesión con <strong>${escapeHtml(professionalName)}</strong> se movió del ${oldWhen} al <strong>${newWhen}</strong>.</p>
      <p>${modalityLine(modality, meetingUrl)}</p>`
   );
   return { subject: "Tu reserva en Magnolia fue reagendada", html };
@@ -101,8 +105,8 @@ export function reminderEmail(args: {
   const when = formatDateEs(startsAt);
   const html = shell(
     "Te esperamos mañana",
-    `<p>Hola ${patientName},</p>
-     <p>Este es un recordatorio de tu sesión con <strong>${professionalName}</strong>, el <strong>${when}</strong>. Te esperamos mañana.</p>
+    `<p>Hola ${escapeHtml(patientName)},</p>
+     <p>Este es un recordatorio de tu sesión con <strong>${escapeHtml(professionalName)}</strong>, el <strong>${when}</strong>. Te esperamos mañana.</p>
      <p>${modalityLine(modality, meetingUrl)}</p>`
   );
   return { subject: "Recordatorio: tu sesión en Magnolia es mañana", html };

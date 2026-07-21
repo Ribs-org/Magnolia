@@ -1,7 +1,6 @@
 "use server";
 import { z } from "zod";
-import { formatISO } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fetchSlotsForRange } from "@/lib/scheduling/fetch-slots";
@@ -37,7 +36,7 @@ export async function createAppointment(input: {
   if (!pro.modalities.includes(modality)) return { ok: false as const, error: "Modalidad no disponible" };
 
   // Revalidar que el slot exista y siga libre
-  const date = formatISO(toZonedTime(new Date(startsAt), CENTER_TZ), { representation: "date" });
+  const date = formatInTimeZone(new Date(startsAt), CENTER_TZ, "yyyy-MM-dd");
   const days = await fetchSlotsForRange(professionalId, date, date);
   const slot = (days[date] ?? []).find(s => s.startsAt === new Date(startsAt).toISOString() && s.modality.includes(modality));
   if (!slot) return { ok: false as const, error: "Esa hora ya no está disponible", code: "SLOT_TAKEN" as const };
@@ -59,11 +58,15 @@ export async function createAppointment(input: {
     return { ok: false as const, error: "No se pudo crear la reserva. Intenta de nuevo." };
   }
 
-  const email = bookingConfirmedEmail({
-    patientName: session.profile.full_name, professionalName: pro.full_name,
-    startsAt: slot.startsAt, modality, meetingUrl: appt.meeting_url,
-  });
-  await sendEmail({ to: session.user.email!, subject: email.subject, html: email.html });
+  try {
+    const email = bookingConfirmedEmail({
+      patientName: session.profile.full_name, professionalName: pro.full_name,
+      startsAt: slot.startsAt, modality, meetingUrl: appt.meeting_url,
+    });
+    await sendEmail({ to: session.user.email!, subject: email.subject, html: email.html });
+  } catch (e) {
+    console.error("[booking] email:", e);
+  }
 
   return { ok: true as const, appointmentId: appt.id };
 }
