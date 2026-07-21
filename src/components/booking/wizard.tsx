@@ -42,6 +42,55 @@ function withAutoModality(state: WizardState, professional?: WizardProfessional)
   return state;
 }
 
+function isValidSpecialty(value: unknown): value is Specialty {
+  return value === "psychologist" || value === "psychiatrist";
+}
+
+function isValidModality(value: unknown): value is Modality {
+  return value === "in_person" || value === "online";
+}
+
+function isValidSlot(value: unknown): value is SelectedSlot {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.startsAt === "string" && typeof candidate.endsAt === "string";
+}
+
+/**
+ * Validates a parsed sessionStorage payload against the current professionals
+ * list, discarding fields cascadingly: an invalid/missing specialty discards
+ * everything; an invalid professionalId (or one that doesn't belong to the
+ * validated specialty) discards professionalId, modality and slot; an invalid
+ * modality (or one the professional doesn't offer) discards modality and slot;
+ * an invalid slot shape discards only the slot.
+ */
+function sanitizeRestoredState(raw: unknown, professionals: WizardProfessional[]): WizardState {
+  if (typeof raw !== "object" || raw === null) return {};
+  const candidate = raw as Record<string, unknown>;
+
+  if (!isValidSpecialty(candidate.specialty)) return {};
+  const specialty = candidate.specialty;
+
+  const professional =
+    typeof candidate.professionalId === "string"
+      ? professionals.find((p) => p.id === candidate.professionalId && p.specialty === specialty)
+      : undefined;
+  if (!professional) return { specialty };
+
+  const professionalId = professional.id;
+
+  if (!isValidModality(candidate.modality) || !professional.modalities.includes(candidate.modality)) {
+    return { specialty, professionalId };
+  }
+  const modality = candidate.modality;
+
+  if (!isValidSlot(candidate.slot)) {
+    return { specialty, professionalId, modality };
+  }
+
+  return { specialty, professionalId, modality, slot: candidate.slot };
+}
+
 const summaryDateFormatter = new Intl.DateTimeFormat("es-CL", {
   weekday: "long",
   day: "numeric",
@@ -60,9 +109,9 @@ function formatPrice(price: number): string {
   return `$${price.toLocaleString("es-CL")}`;
 }
 
-function safeParseWizardState(raw: string): WizardState | null {
+function safeParseJson(raw: string): unknown {
   try {
-    return JSON.parse(raw) as WizardState;
+    return JSON.parse(raw);
   } catch {
     return null;
   }
@@ -97,15 +146,21 @@ export function BookingWizard({
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (raw) {
       sessionStorage.removeItem(STORAGE_KEY);
-      const restored = safeParseWizardState(raw);
-      if (restored && activeRef.current) {
-        setState(restored);
-        setStep(computeStep(restored));
+      // Un deep-link explícito (preselectSlug) manda sobre cualquier selección
+      // guardada previamente: no restauramos, solo limpiamos la clave.
+      if (!preselectSlug) {
+        const parsed = safeParseJson(raw);
+        const restored = parsed !== null ? sanitizeRestoredState(parsed, professionals) : {};
+        if (Object.keys(restored).length > 0 && activeRef.current) {
+          setState(restored);
+          setStep(computeStep(restored));
+        }
       }
     }
     return () => {
       activeRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restauración de una sola vez al montar
   }, []);
 
   const professional = professionals.find((p) => p.id === state.professionalId);
@@ -126,7 +181,7 @@ export function BookingWizard({
   }
 
   function selectModality(modality: Modality) {
-    const next: WizardState = { ...state, modality };
+    const next: WizardState = { specialty: state.specialty, professionalId: state.professionalId, modality };
     setState(next);
     setConfirmError(null);
     setStep(computeStep(next));
