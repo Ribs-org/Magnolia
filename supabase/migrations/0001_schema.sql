@@ -141,21 +141,38 @@ alter table public.settings enable row level security;
 
 -- profiles: own row; admin all; professionals can read patients they attend (via join in app using admin client instead — keep simple: admin + self)
 create policy "profiles self read" on public.profiles for select using (id = auth.uid() or public.my_role() = 'admin');
-create policy "profiles self update" on public.profiles for update using (id = auth.uid()) with check (id = auth.uid() and role = 'patient' or public.my_role() = 'admin');
+create policy "profiles self update" on public.profiles for update
+  using (id = auth.uid()) with check (id = auth.uid());
+
+create or replace function public.guard_profile_update() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null or public.my_role() = 'admin' then return new; end if;
+  if new.role is distinct from old.role then
+    raise exception 'No autorizado a cambiar el rol';
+  end if;
+  return new;
+end; $$;
+create trigger profiles_guard_update before update on public.profiles
+  for each row execute function public.guard_profile_update();
 create policy "profiles admin all" on public.profiles for all using (public.my_role() = 'admin');
 
 -- professionals: public read of active; owner update; admin all
-create policy "professionals public read" on public.professionals for select using (true);
-create policy "professionals owner update" on public.professionals for update using (profile_id = auth.uid());
+create policy "professionals public read" on public.professionals for select
+  using (is_active = true or profile_id = auth.uid() or public.my_role() = 'admin');
+create policy "professionals owner update" on public.professionals for update
+  using (profile_id = auth.uid()) with check (profile_id = auth.uid());
 create policy "professionals admin all" on public.professionals for all using (public.my_role() = 'admin');
 
 -- availability: public read (needed to compute slots), owner + admin write
 create policy "rules public read" on public.availability_rules for select using (true);
 create policy "rules owner write" on public.availability_rules for all
-  using (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin');
+  using (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin')
+  with check (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin');
 create policy "exceptions public read" on public.availability_exceptions for select using (true);
 create policy "exceptions owner write" on public.availability_exceptions for all
-  using (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin');
+  using (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin')
+  with check (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin');
 
 -- appointments: patient sees own; professional sees own; admin all; patients insert own
 create policy "appt patient read" on public.appointments for select using (patient_id = auth.uid());
@@ -165,14 +182,40 @@ create policy "appt admin all" on public.appointments for all using (public.my_r
 create policy "appt patient insert" on public.appointments for insert
   with check (patient_id = auth.uid() and status = 'confirmed' and source = 'web');
 create policy "appt patient cancel" on public.appointments for update
-  using (patient_id = auth.uid()) with check (patient_id = auth.uid());
+  using (patient_id = auth.uid() and status = 'confirmed')
+  with check (patient_id = auth.uid() and status = 'cancelled_by_patient');
 create policy "appt professional update" on public.appointments for update
-  using (professional_id in (select id from public.professionals where profile_id = auth.uid()));
+  using (professional_id in (select id from public.professionals where profile_id = auth.uid()))
+  with check (professional_id in (select id from public.professionals where profile_id = auth.uid()));
+
+create or replace function public.guard_appointment_update() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null or public.my_role() = 'admin' then return new; end if;
+  if new.patient_id is distinct from old.patient_id
+     or new.professional_id is distinct from old.professional_id
+     or new.starts_at is distinct from old.starts_at
+     or new.ends_at is distinct from old.ends_at
+     or new.modality is distinct from old.modality
+     or new.source is distinct from old.source then
+    raise exception 'No autorizado a modificar estos campos de la cita';
+  end if;
+  return new;
+end; $$;
+create trigger appointments_guard_update before update on public.appointments
+  for each row execute function public.guard_appointment_update();
 
 -- session_notes: strictly author-only (not even admin)
 create policy "notes author all" on public.session_notes for all
   using (professional_id in (select id from public.professionals where profile_id = auth.uid()))
-  with check (professional_id in (select id from public.professionals where profile_id = auth.uid()));
+  with check (
+    professional_id in (select id from public.professionals where profile_id = auth.uid())
+    and exists (
+      select 1 from public.appointments a
+      where a.id = session_notes.appointment_id
+        and a.professional_id = session_notes.professional_id
+    )
+  );
 
 -- payments: admin + owning patient read
 create policy "payments admin all" on public.payments for all using (public.my_role() = 'admin');
@@ -182,3 +225,7 @@ create policy "payments patient read" on public.payments for select
 -- settings: public read, admin write
 create policy "settings public read" on public.settings for select using (true);
 create policy "settings admin write" on public.settings for all using (public.my_role() = 'admin');
+
+-- Column-level hardening: anon must not read meeting_url
+revoke select on public.professionals from anon;
+grant select (id, profile_id, slug, specialty, photo_url, bio, modalities, session_duration_min, session_price, is_active, created_at) on public.professionals to anon;
