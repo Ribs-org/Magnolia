@@ -77,14 +77,17 @@ export async function setAppointmentStatus(
   const session = await getSessionProfile();
   if (!session || session.profile.role === "patient") return { ok: false, error: "No autorizado" };
   const supabase = await createClient();
-  const { data: updated, error } = await supabase
-    .from("appointments")
-    .update({ status: parsedStatus.data })
-    .eq("id", parsedId.data)
-    .select("id");
+  const base = supabase.from("appointments").update({ status: parsedStatus.data }).eq("id", parsedId.data);
+  // Precondiciones de transición: completed/no_show solo desde confirmed; el "deshacer" a
+  // confirmed solo desde completed/no_show. Nunca se resucita una cita cancelada.
+  const scoped =
+    parsedStatus.data === "confirmed"
+      ? base.in("status", ["completed", "no_show"])
+      : base.eq("status", "confirmed");
+  const { data: updated, error } = await scoped.select("id");
   if (error) return { ok: false, error: "No se pudo actualizar" }; // RLS limita al profesional a sus citas
   if (!updated || updated.length === 0) {
-    return { ok: false, error: "No se pudo actualizar (verifica que sea tu cita)" };
+    return { ok: false, error: "La cita cambió de estado. Actualiza la página." };
   }
   revalidatePath("/panel");
   return { ok: true };

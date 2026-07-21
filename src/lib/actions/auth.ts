@@ -47,6 +47,8 @@ export async function requestPasswordReset(_prev: unknown, formData: FormData) {
   const email = z.string().email().safeParse(formData.get("email"));
   if (!email.success) return { error: "Email inválido" };
   const supabase = await createClient();
-  await supabase.auth.resetPasswordForEmail(email.data, { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/login` });
+  await supabase.auth.resetPasswordForEmail(email.data, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/restablecer`,
+  });
   return { error: undefined, ok: true as const };
 }

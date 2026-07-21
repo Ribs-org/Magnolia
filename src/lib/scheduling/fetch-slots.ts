@@ -14,15 +14,16 @@ export async function fetchSlotsForRange(
   opts?: { minLeadMinutes?: number }
 ): Promise<Record<string, Slot[]>> {
   const supabase = await createClient();
-  // Las citas ajenas no son legibles con el cliente del visitante (RLS);
-  // la consulta de ocupados usa service-role y solo expone horarios agregados.
+  // Las reglas/excepciones de disponibilidad y las citas ajenas no son legibles con el
+  // cliente del visitante (RLS: solo dueño o admin); estas consultas usan service-role y
+  // solo exponen horarios ya calculados (computeDaySlots), nunca las filas crudas.
   const admin = createAdminClient();
   const rangeStart = fromZonedTime(`${fromDate}T00:00:00`, CENTER_TZ).toISOString();
   const rangeEnd = fromZonedTime(`${toDate}T23:59:59`, CENTER_TZ).toISOString();
   const [{ data: pro }, { data: rules }, { data: exceptions }, { data: busy }] = await Promise.all([
     supabase.from("professionals").select("id, session_duration_min, is_active").eq("id", professionalId).maybeSingle(),
-    supabase.from("availability_rules").select("*").eq("professional_id", professionalId),
-    supabase.from("availability_exceptions").select("*").eq("professional_id", professionalId).gte("date", fromDate).lte("date", toDate),
+    admin.from("availability_rules").select("*").eq("professional_id", professionalId),
+    admin.from("availability_exceptions").select("*").eq("professional_id", professionalId).gte("date", fromDate).lte("date", toDate),
     admin.from("appointments").select("starts_at, ends_at").eq("professional_id", professionalId)
       .eq("status", "confirmed").gte("starts_at", rangeStart).lte("starts_at", rangeEnd),
   ]);

@@ -66,7 +66,7 @@ export function AppointmentCard({ appt, canModify }: { appt: PortalAppointment; 
         )}
       </div>
 
-      {(canJoin || (canModify && appt.professional)) && (
+      {(canJoin || canModify) && (
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {canJoin && (
             <a
@@ -78,8 +78,8 @@ export function AppointmentCard({ appt, canModify }: { appt: PortalAppointment; 
               Unirse a la videollamada
             </a>
           )}
-          {canModify && appt.professional && (
-            <CancelDialog appointmentId={appt.id} professionalSlug={appt.professional.slug} />
+          {canModify && (
+            <CancelDialog appointmentId={appt.id} professionalSlug={appt.professional?.slug} />
           )}
         </div>
       )}

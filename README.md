@@ -23,9 +23,9 @@ Plataforma de reservas online para un centro de salud mental (psicología y psiq
 
 2. Crear un proyecto en [Supabase](https://supabase.com).
 
-3. Aplicar el schema: abrir **SQL Editor** en el dashboard de Supabase, pegar el contenido completo de [`supabase/migrations/0001_schema.sql`](./supabase/migrations/0001_schema.sql) y ejecutarlo. Este archivo crea tablas, tipos, funciones, triggers y todas las políticas de RLS — es la única fuente de verdad del schema (no hay migraciones incrementales en fase 1, y no se usa el CLI de Supabase para esto).
+3. Aplicar el schema: abrir **SQL Editor** en el dashboard de Supabase, pegar el contenido completo de [`supabase/migrations/0001_schema.sql`](./supabase/migrations/0001_schema.sql) y ejecutarlo. Este archivo crea tablas, tipos, funciones, triggers y todas las políticas de RLS — es la única fuente de verdad del schema (no hay migraciones incrementales en fase 1, y no se usa el CLI de Supabase para esto). **Es de ejecución única**: no usa `if not exists` en sus `create`, así que no es re-ejecutable tal cual. Si falla a medias (por ejemplo, se corta en la mitad de las políticas de RLS), hay que limpiar manualmente lo que sí se creó (`drop` de tablas/tipos/funciones ya aplicados) antes de volver a correrlo completo — no basta con reintentar.
 
-4. Desactivar la confirmación de email: en **Authentication → Sign In / Up**, desactivar **"Confirm email"**. El seed y el flujo de registro crean usuarios directamente confirmados vía Admin API, pero conviene desactivarlo igual para no bloquear registros manuales durante desarrollo/demo.
+4. Desactivar la confirmación de email: en **Authentication → Sign In / Up**, desactivar **"Confirm email"**. El seed (`scripts/seed.ts`) sí usa la Admin API para crear usuarios ya confirmados, pero el flujo de registro de la app (`signUp` en `src/lib/actions/auth.ts`) usa el `auth.signUp` normal del cliente — sin este flag desactivado, esas cuentas quedarían sin confirmar y no podrían iniciar sesión. **Importante**: este mismo flag debe desactivarse también en el proyecto Supabase de **producción**, no solo en desarrollo — no es algo que se resuelva solo por estar en el `.env` de un ambiente.
 
 5. Copiar las variables de entorno:
 
@@ -120,3 +120,13 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/remi
 - **Pagos**: la tabla `payments` ya existe en el schema (`supabase/migrations/0001_schema.sql`, ligada 1:1 a `appointments`, con `status`, `provider` y `external_id`), pero no hay integración activa. La idea es introducir una interfaz `PaymentProvider` (ej. Webpay/Flow/Mercado Pago) que abstraiga el cobro y actualice esta tabla, sin acoplar el resto de la app a un proveedor específico.
 - **WhatsApp**: notificaciones y recordatorios por WhatsApp (además o en vez de email), probablemente vía un proveedor tipo Twilio o la API de WhatsApp Business.
 - **Ficha clínica**: hoy `session_notes` guarda notas de sesión simples, privadas por profesional. Una ficha clínica estructurada (antecedentes, evolución, adjuntos) es un desarrollo mayor a futuro.
+
+## Limitaciones conocidas (follow-ups)
+
+- **Validación de variables de entorno al arrancar**: hoy las env vars (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, etc.) se leen con `!` donde se usan; si falta una, el error aparece tarde y de forma poco clara. Falta un chequeo temprano (por ejemplo con `zod`) que falle rápido y con un mensaje explícito.
+- **Validación de dígito verificador de RUT**: el registro solo valida largo mínimo (`rut.min(8)`), no el dígito verificador real. Un RUT con formato válido pero DV incorrecto pasa el formulario.
+- **Batching de settings**: `src/lib/settings.ts` hace una consulta por cada `getSetting` individual; en páginas que leen varias claves (ej. `cancellation_window_hours` y `center_phone`) esto son round-trips separados en vez de una sola consulta agrupada.
+- **Sin test adicional de cambio de hora (DST)** más allá del caso agregado en esta ronda (`tests/scheduling/slots.dst.test.ts`, primavera en Chile); faltaría cobertura del otro extremo (otoño / retraso de reloj) y de otros husos horarios si el centro llegase a operar en más de uno.
+- **Paginación de `listUsers` en el seed**: `scripts/seed.ts` asume que todos los usuarios existentes caben en una sola página de `auth.admin.listUsers()`; en un proyecto con muchos usuarios, la búsqueda "¿ya existe este email?" podría no encontrar coincidencias más allá de la primera página.
+- **Creación de profesional no transaccional**: crear un profesional implica varios pasos (usuario en Auth, fila en `professionals`, reglas de disponibilidad) sin una transacción que los agrupe; un fallo a mitad de camino puede dejar estado parcial que hay que limpiar a mano.
+- **Focus management del wizard**: el flujo de reserva (selección de profesional → modalidad → horario → confirmación) no mueve el foco del teclado entre pasos, lo que degrada la experiencia con lectores de pantalla y navegación por teclado.

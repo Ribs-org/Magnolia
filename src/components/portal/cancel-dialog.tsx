@@ -19,7 +19,7 @@ export function CancelDialog({
   professionalSlug,
 }: {
   appointmentId: string;
-  professionalSlug: string;
+  professionalSlug?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -44,7 +44,7 @@ export function CancelDialog({
         return;
       }
       setOpen(false);
-      if (wantsReschedule) {
+      if (wantsReschedule && professionalSlug) {
         router.push(`/reservar?profesional=${encodeURIComponent(professionalSlug)}`);
       } else {
         router.refresh();
@@ -63,15 +63,17 @@ export function CancelDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <label className="flex items-center gap-2 text-sm text-ink/80">
-          <input
-            type="checkbox"
-            checked={wantsReschedule}
-            onChange={(e) => setWantsReschedule(e.target.checked)}
-            className="h-4 w-4 rounded border-ink/30 text-sage focus:ring-sage"
-          />
-          Cancelar y reagendar
-        </label>
+        {professionalSlug && (
+          <label className="flex items-center gap-2 text-sm text-ink/80">
+            <input
+              type="checkbox"
+              checked={wantsReschedule}
+              onChange={(e) => setWantsReschedule(e.target.checked)}
+              className="h-4 w-4 rounded border-ink/30 text-sage focus:ring-sage"
+            />
+            Cancelar y reagendar
+          </label>
+        )}
 
         {error && <p className="text-sm text-red-700">{error}</p>}
 

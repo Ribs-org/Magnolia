@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { CENTER_TZ } from "@/lib/constants";
 import type { Modality } from "@/lib/types";
@@ -82,14 +82,15 @@ export function SlotPicker({
   const from = useMemo(() => addDaysToDateStr(today, windowStart), [today, windowStart]);
   const to = useMemo(() => addDaysToDateStr(today, windowStart + WINDOW_DAYS - 1), [today, windowStart]);
 
-  const activeRef = useRef(true);
-
   useEffect(() => {
-    activeRef.current = true;
-    if (activeRef.current) {
-      setLoading(true);
-      setError(null);
-    }
+    // Flag local al efecto (no una ref compartida): cada ejecución tiene su propia
+    // bandera, así una respuesta tardía de un efecto anterior nunca puede pisar el
+    // estado de una ejecución más nueva (ver guards en los callbacks de abajo).
+    let cancelled = false;
+    // Reset síncrono e intencional del estado de carga/error al cambiar de parámetros de búsqueda.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    setError(null);
     const leadParam = leadMinutes !== undefined ? `&lead=${leadMinutes}` : "";
     fetch(`/api/availability?professionalId=${encodeURIComponent(professionalId)}&from=${from}&to=${to}${leadParam}`)
       .then(async (res) => {
@@ -97,16 +98,16 @@ export function SlotPicker({
         return (await res.json()) as { days: Record<string, Slot[]> };
       })
       .then((data) => {
-        if (activeRef.current) setDays(data.days ?? {});
+        if (!cancelled) setDays(data.days ?? {});
       })
       .catch(() => {
-        if (activeRef.current) setError("No pudimos cargar los horarios disponibles. Intenta nuevamente.");
+        if (!cancelled) setError("No pudimos cargar los horarios disponibles. Intenta nuevamente.");
       })
       .finally(() => {
-        if (activeRef.current) setLoading(false);
+        if (!cancelled) setLoading(false);
       });
     return () => {
-      activeRef.current = false;
+      cancelled = true;
     };
   }, [professionalId, from, to, refreshKey, leadMinutes]);
 

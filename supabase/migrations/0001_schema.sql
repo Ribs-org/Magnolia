@@ -177,12 +177,16 @@ create policy "professionals owner update" on public.professionals for update
   using (profile_id = auth.uid()) with check (profile_id = auth.uid());
 create policy "professionals admin all" on public.professionals for all using (public.my_role() = 'admin');
 
--- availability: public read (needed to compute slots), owner + admin write
-create policy "rules public read" on public.availability_rules for select using (true);
+-- availability: solo el dueño y admin leen las reglas/excepciones crudas.
+-- El cómputo de slots para el público pasa por src/lib/scheduling/fetch-slots.ts
+-- con el cliente admin (service role) y solo expone horarios ya calculados.
+create policy "rules staff read" on public.availability_rules for select
+  using (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin');
 create policy "rules owner write" on public.availability_rules for all
   using (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin')
   with check (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin');
-create policy "exceptions public read" on public.availability_exceptions for select using (true);
+create policy "exceptions staff read" on public.availability_exceptions for select
+  using (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin');
 create policy "exceptions owner write" on public.availability_exceptions for all
   using (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin')
   with check (professional_id in (select id from public.professionals where profile_id = auth.uid()) or public.my_role() = 'admin');
@@ -203,6 +207,7 @@ create policy "appt professional update" on public.appointments for update
 
 create or replace function public.guard_appointment_update() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare win int;
 begin
   if auth.uid() is null or public.my_role() = 'admin' then return new; end if;
   if new.patient_id is distinct from old.patient_id
@@ -213,17 +218,51 @@ begin
      or new.source is distinct from old.source then
     raise exception 'No autorizado a modificar estos campos de la cita';
   end if;
+  if new.status = 'cancelled_by_patient' and old.status = 'confirmed' then
+    select value::int into win from public.settings where key = 'cancellation_window_hours';
+    if old.starts_at <= now() + make_interval(hours => coalesce(win, 24)) then
+      raise exception 'Fuera de la ventana de cancelación';
+    end if;
+  end if;
   return new;
 end; $$;
 create trigger appointments_guard_update before update on public.appointments
   for each row execute function public.guard_appointment_update();
+
+-- Valida inserciones de citas de usuarios finales (incluye REST directo)
+create or replace function public.guard_appointment_insert() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  pro public.professionals%rowtype;
+begin
+  if auth.uid() is null or public.my_role() = 'admin' then return new; end if;
+  select * into pro from public.professionals where id = new.professional_id;
+  if pro.id is null or not pro.is_active then
+    raise exception 'Profesional no disponible';
+  end if;
+  if not (new.modality = any(pro.modalities)) then
+    raise exception 'Modalidad no ofrecida por el profesional';
+  end if;
+  if new.ends_at - new.starts_at <> make_interval(mins => pro.session_duration_min) then
+    raise exception 'Duración de cita inválida';
+  end if;
+  if new.starts_at <= now() then
+    raise exception 'La cita debe ser en el futuro';
+  end if;
+  return new;
+end; $$;
+create trigger appointments_guard_insert before insert on public.appointments
+  for each row execute function public.guard_appointment_insert();
 
 -- Copia (autoritativamente) el link de videollamada del profesional al crear una cita online
 create or replace function public.set_appointment_meeting_url() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if new.modality = 'online' then
-    select meeting_url into new.meeting_url from public.professionals where id = new.professional_id;
+    select meeting_url into new.meeting_url from public.professionals
+      where id = new.professional_id and 'online' = any(modalities);
+  else
+    new.meeting_url := null;
   end if;
   return new;
 end; $$;
