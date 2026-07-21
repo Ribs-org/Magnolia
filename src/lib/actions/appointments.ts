@@ -35,11 +35,17 @@ export async function cancelMyAppointment(appointmentId: string): Promise<{ ok: 
     };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("appointments")
     .update({ status: "cancelled_by_patient", cancelled_at: new Date().toISOString() })
-    .eq("id", appointmentId);
+    .eq("id", appointmentId)
+    .eq("patient_id", session.user.id)
+    .eq("status", "confirmed")
+    .select("id");
   if (error) return { ok: false, error: "No se pudo cancelar. Intenta de nuevo." };
+  if (!updated || updated.length === 0) {
+    return { ok: false, error: "La cita ya no se puede cancelar (su estado cambió). Actualiza la página." };
+  }
 
   try {
     const email = bookingCancelledEmail({

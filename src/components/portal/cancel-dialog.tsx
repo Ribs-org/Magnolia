@@ -45,7 +45,7 @@ export function CancelDialog({
       }
       setOpen(false);
       if (wantsReschedule) {
-        router.push(`/reservar?profesional=${professionalSlug}`);
+        router.push(`/reservar?profesional=${encodeURIComponent(professionalSlug)}`);
       } else {
         router.refresh();
       }
