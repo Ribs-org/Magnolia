@@ -54,6 +54,11 @@ create table public.professionals (
   created_at timestamptz not null default now()
 );
 
+-- Profesional: id de su fila en professionals (evita recursion en policies)
+create or replace function public.my_professional_id() returns uuid
+language sql stable security definer set search_path = public as
+$$ select id from public.professionals where profile_id = auth.uid() $$;
+
 -- Weekly recurring availability
 create table public.availability_rules (
   id uuid primary key default gen_random_uuid(),
@@ -157,6 +162,13 @@ end; $$;
 create trigger profiles_guard_update before update on public.profiles
   for each row execute function public.guard_profile_update();
 create policy "profiles admin all" on public.profiles for all using (public.my_role() = 'admin');
+
+create policy "profiles professional reads own patients" on public.profiles for select
+  using (exists (
+    select 1 from public.appointments a
+    where a.patient_id = profiles.id
+      and a.professional_id = public.my_professional_id()
+  ));
 
 -- professionals: public read of active; owner update; admin all
 create policy "professionals public read" on public.professionals for select

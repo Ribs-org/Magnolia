@@ -63,3 +63,23 @@ export async function cancelMyAppointment(appointmentId: string): Promise<{ ok: 
   revalidatePath("/mi-cuenta");
   return { ok: true };
 }
+
+export async function setAppointmentStatus(
+  appointmentId: string,
+  status: "completed" | "no_show" | "confirmed"
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await getSessionProfile();
+  if (!session || session.profile.role === "patient") return { ok: false, error: "No autorizado" };
+  const supabase = await createClient();
+  const { data: updated, error } = await supabase
+    .from("appointments")
+    .update({ status })
+    .eq("id", appointmentId)
+    .select("id");
+  if (error) return { ok: false, error: "No se pudo actualizar" }; // RLS limita al profesional a sus citas
+  if (!updated || updated.length === 0) {
+    return { ok: false, error: "No se pudo actualizar (verifica que sea tu cita)" };
+  }
+  revalidatePath("/panel");
+  return { ok: true };
+}
