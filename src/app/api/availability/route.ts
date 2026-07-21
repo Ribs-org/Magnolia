@@ -2,11 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { fetchSlotsForRange } from "@/lib/scheduling/fetch-slots";
 
-const query = z.object({
-  professionalId: z.string().uuid(),
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-});
+function isValidDate(s: string): boolean {
+  const [y, m, d] = s.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
+const query = z
+  .object({
+    professionalId: z.string().uuid(),
+    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  })
+  .refine((q) => isValidDate(q.from) && isValidDate(q.to), { message: "Fecha inválida" })
+  .refine((q) => q.from <= q.to, { message: "Rango inválido" });
 
 export async function GET(req: NextRequest) {
   const parsed = query.safeParse(Object.fromEntries(req.nextUrl.searchParams));
