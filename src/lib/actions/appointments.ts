@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { canPatientModify } from "@/lib/scheduling/cancellation";
@@ -68,13 +69,18 @@ export async function setAppointmentStatus(
   appointmentId: string,
   status: "completed" | "no_show" | "confirmed"
 ): Promise<{ ok: boolean; error?: string }> {
+  const parsedId = z.string().uuid().safeParse(appointmentId);
+  if (!parsedId.success) return { ok: false, error: "Cita inválida" };
+  const parsedStatus = z.enum(["completed", "no_show", "confirmed"]).safeParse(status);
+  if (!parsedStatus.success) return { ok: false, error: "Estado inválido" };
+
   const session = await getSessionProfile();
   if (!session || session.profile.role === "patient") return { ok: false, error: "No autorizado" };
   const supabase = await createClient();
   const { data: updated, error } = await supabase
     .from("appointments")
-    .update({ status })
-    .eq("id", appointmentId)
+    .update({ status: parsedStatus.data })
+    .eq("id", parsedId.data)
     .select("id");
   if (error) return { ok: false, error: "No se pudo actualizar" }; // RLS limita al profesional a sus citas
   if (!updated || updated.length === 0) {
