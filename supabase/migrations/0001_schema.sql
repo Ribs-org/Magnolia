@@ -205,6 +205,18 @@ end; $$;
 create trigger appointments_guard_update before update on public.appointments
   for each row execute function public.guard_appointment_update();
 
+-- Copia el link de videollamada del profesional al crear una cita online
+create or replace function public.set_appointment_meeting_url() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.modality = 'online' and new.meeting_url is null then
+    select meeting_url into new.meeting_url from public.professionals where id = new.professional_id;
+  end if;
+  return new;
+end; $$;
+create trigger appointments_set_meeting_url before insert on public.appointments
+  for each row execute function public.set_appointment_meeting_url();
+
 -- session_notes: strictly author-only (not even admin)
 create policy "notes author all" on public.session_notes for all
   using (professional_id in (select id from public.professionals where profile_id = auth.uid()))
@@ -226,6 +238,6 @@ create policy "payments patient read" on public.payments for select
 create policy "settings public read" on public.settings for select using (true);
 create policy "settings admin write" on public.settings for all using (public.my_role() = 'admin');
 
--- Column-level hardening: anon must not read meeting_url
-revoke select on public.professionals from anon;
-grant select (id, profile_id, slug, specialty, photo_url, bio, modalities, session_duration_min, session_price, is_active, created_at) on public.professionals to anon;
+-- Column-level hardening: ni anon ni authenticated leen meeting_url de professionals
+revoke select on public.professionals from anon, authenticated;
+grant select (id, profile_id, slug, specialty, photo_url, bio, modalities, session_duration_min, session_price, is_active, created_at) on public.professionals to anon, authenticated;
