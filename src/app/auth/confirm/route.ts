@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 // Misma regla que safeNext en src/lib/actions/auth.ts: una sola barra inicial, nunca "//...".
 function safeNext(value: string | null, fallback: string): string {
-  return typeof value === "string" && /^\/(?!\/)/.test(value) ? value : fallback;
+  return typeof value === "string" && /^\/(?!\/|\\)/.test(value) ? value : fallback;
 }
 
 export async function GET(req: NextRequest) {

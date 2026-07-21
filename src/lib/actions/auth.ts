@@ -4,7 +4,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
 function safeNext(value: FormDataEntryValue | null, fallback: string): string {
-  return typeof value === "string" && /^\/(?!\/)/.test(value) ? value : fallback;
+  return typeof value === "string" && /^\/(?!\/|\\)/.test(value) ? value : fallback;
 }
 
 const credentials = z.object({ email: z.string().email("Email inválido"), password: z.string().min(8, "Mínimo 8 caracteres") });
