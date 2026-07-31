@@ -43,8 +43,10 @@ export default async function ContactoPage() {
           </div>
           <div>
             <p className="font-heading text-lg text-sage-dark">Horario de atención</p>
-            <p className="mt-2 text-ink/75">Lunes a viernes: 9:00 – 19:00</p>
-            <p className="text-ink/75">Sábado: 9:00 – 13:00</p>
+            <p className="mt-2 text-ink/75">Lunes a viernes: 6:30 – 22:00</p>
+            <p className="text-ink/75">Sábado: 8:00 – 20:00</p>
+            <p className="text-ink/75">Feriados: 7:00 – 14:00</p>
+            <p className="text-ink/75">Domingo: cerrado</p>
           </div>
         </div>
 

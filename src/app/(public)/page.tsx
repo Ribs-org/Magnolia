@@ -261,8 +261,10 @@ export default async function HomePage() {
                 <Clock3 className="mt-1 h-5 w-5 shrink-0 text-plum" aria-hidden />
                 <div>
                   <p className="font-medium text-ink">Horario de atención</p>
-                  <p className="mt-1 text-ink/70">Lunes a viernes: 9:00 a 19:00</p>
-                  <p className="text-ink/70">Sábado: 9:00 a 13:00</p>
+                  <p className="mt-1 text-ink/70">Lunes a viernes: 6:30 a 22:00</p>
+                  <p className="text-ink/70">Sábado: 8:00 a 20:00</p>
+                  <p className="text-ink/70">Feriados: 7:00 a 14:00</p>
+                  <p className="text-ink/70">Domingo: cerrado</p>
                 </div>
               </div>
             </div>
