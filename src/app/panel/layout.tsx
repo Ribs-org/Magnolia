@@ -13,6 +13,7 @@ const NAV_LINKS: { href: string; label: string; roles: Role[] }[] = [
   { href: "/panel/disponibilidad", label: "Disponibilidad", roles: ["professional", "admin"] },
   { href: "/panel/pacientes", label: "Pacientes", roles: ["admin"] },
   { href: "/panel/profesionales", label: "Profesionales", roles: ["admin"] },
+  { href: "/panel/equipo", label: "Equipo del sitio", roles: ["admin"] },
   { href: "/panel/configuracion", label: "Configuración", roles: ["admin"] },
 ];
 

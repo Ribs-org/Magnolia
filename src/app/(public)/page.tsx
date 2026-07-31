@@ -2,7 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { CalendarDays, Clock3, MailCheck, MapPin, Phone, UserRound } from "lucide-react";
 import { CENTER_ADDRESS, CENTER_EMAIL, CENTER_PHONE } from "@/lib/constants";
-import { TEAM } from "@/lib/team";
+import { getTeam } from "@/lib/team";
+
+// ISR: el equipo se edita desde /panel/equipo (revalidatePath al guardar).
+export const revalidate = 300;
 
 const RESERVO_AGENDA_URL = "https://agendamiento.reservo.cl/makereserva/agenda/a0Cvn180b0IBWl6u4X36ZBy5J5B0hM";
 
@@ -56,7 +59,8 @@ function initialsOf(name: string) {
     .join("");
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const team = (await getTeam()).filter((member) => member.visible);
   return (
     <>
       {/* Hero */}
@@ -148,11 +152,11 @@ export default function HomePage() {
             Especialistas en psiquiatría, psicología y terapia ocupacional, disponibles en la agenda en línea.
           </p>
           <div className="mt-14 grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4">
-            {TEAM.map((member) => (
-              <div key={member.name} className="text-center">
-                {member.photo ? (
+            {team.map((member) => (
+              <div key={member.id} className="text-center">
+                {member.photo_url ? (
                   <Image
-                    src={member.photo}
+                    src={member.photo_url}
                     alt={member.name}
                     width={224}
                     height={224}
