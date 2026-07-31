@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | Centro de Salud Magnolia",
   },
   description:
-    "Centro de salud mental con atención presencial y online. Agenda tu hora de psicología o psiquiatría en línea.",
+    "Centro de salud mental en Las Condes. Psiquiatría, psicología, terapia ocupacional y psicodiagnóstico para niños, adolescentes y adultos. Agenda tu hora en línea.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

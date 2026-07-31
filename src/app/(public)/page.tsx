@@ -2,14 +2,38 @@ import Link from "next/link";
 import Image from "next/image";
 import { CalendarDays, Clock3, MailCheck, MapPin, Phone, UserRound } from "lucide-react";
 import { CENTER_ADDRESS, CENTER_EMAIL, CENTER_PHONE } from "@/lib/constants";
+import { TEAM } from "@/lib/team";
 
 const RESERVO_AGENDA_URL = "https://agendamiento.reservo.cl/makereserva/agenda/a0Cvn180b0IBWl6u4X36ZBy5J5B0hM";
+
+const SERVICES = [
+  {
+    title: "Psiquiatría",
+    description: "Evaluación y tratamiento infantojuvenil y de adultos, con seguimiento coordinado con tu proceso terapéutico.",
+    modalities: ["Presencial", "Telemedicina"],
+  },
+  {
+    title: "Psicología",
+    description: "Psicoterapia para adolescentes y adultos: ansiedad, ánimo, duelo y bienestar general, a tu ritmo.",
+    modalities: ["Teleconsulta"],
+  },
+  {
+    title: "Terapia ocupacional",
+    description: "Acompañamiento para recuperar autonomía y bienestar en las actividades de la vida diaria.",
+    modalities: ["Presencial", "Teleconsulta"],
+  },
+  {
+    title: "Psicodiagnóstico",
+    description: "Evaluación psicológica integral que orienta el diagnóstico y el plan de tratamiento.",
+    modalities: [],
+  },
+];
 
 const STEPS = [
   {
     icon: UserRound,
     title: "Elige a tu profesional",
-    description: "Revisa la agenda de psicólogos y psiquiatras y encuentra a quien más te acomode.",
+    description: "Revisa la agenda de nuestros especialistas y encuentra a quien más te acomode.",
   },
   {
     icon: CalendarDays,
@@ -23,6 +47,15 @@ const STEPS = [
   },
 ];
 
+function initialsOf(name: string) {
+  return name
+    .split(" ")
+    .filter((part) => part.length > 1 && !part.includes("."))
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
 export default function HomePage() {
   return (
     <>
@@ -34,7 +67,7 @@ export default function HomePage() {
               Un espacio para <em className="text-plum">sentirte mejor</em>
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink/70">
-              Psicología y psiquiatría, presencial y online, en un ambiente cercano. Agenda tu hora en minutos.
+              Psiquiatría, psicología y terapia ocupacional para niños, adolescentes y adultos, presencial y por teleconsulta.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <Link
@@ -68,37 +101,79 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Quiénes somos */}
+      <section id="quienes-somos" className="scroll-mt-20 bg-white py-20 sm:py-24">
+        <div className="mx-auto max-w-2xl px-4 text-center">
+          <h2 className="font-heading text-4xl text-ink">Quiénes somos</h2>
+          <p className="mt-6 text-lg leading-relaxed text-ink/70">
+            Somos un centro de salud mental en Las Condes, formado por psiquiatras, psicólogos y
+            terapeutas ocupacionales que acompañan a niños, adolescentes y adultos.
+          </p>
+          <p className="mt-4 leading-relaxed text-ink/70">
+            Creemos en un trato cercano y sin apuro: cada persona avanza a su propio ritmo, con un
+            plan coordinado entre especialistas, en consulta presencial o teleconsulta.
+          </p>
+        </div>
+      </section>
+
       {/* Servicios */}
       <section id="servicios" className="scroll-mt-20 py-20 sm:py-24">
         <div className="mx-auto max-w-5xl px-4">
           <h2 className="text-center font-heading text-4xl text-ink">Nuestros servicios</h2>
-          <div className="mt-14 grid gap-8 sm:grid-cols-2">
-            <div className="rounded-3xl border border-plum/10 bg-white p-8 shadow-sm shadow-plum/5">
-              <p className="font-heading text-2xl text-plum">Psicología</p>
-              <p className="mt-3 leading-relaxed text-ink/70">
-                Acompañamiento terapéutico para ansiedad, ánimo, duelo y bienestar general, a tu ritmo.
-              </p>
-              <div className="mt-6 flex gap-2 text-xs font-medium text-plum">
-                <span className="rounded-full bg-petal/70 px-3 py-1">Presencial</span>
-                <span className="rounded-full bg-petal/70 px-3 py-1">Online</span>
+          <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2">
+            {SERVICES.map((service) => (
+              <div key={service.title} className="rounded-3xl border border-plum/10 bg-white p-8 shadow-sm shadow-plum/5">
+                <p className="font-heading text-2xl text-plum">{service.title}</p>
+                <p className="mt-3 leading-relaxed text-ink/70">{service.description}</p>
+                {service.modalities.length > 0 && (
+                  <div className="mt-6 flex gap-2 text-xs font-medium text-plum">
+                    {service.modalities.map((modality) => (
+                      <span key={modality} className="rounded-full bg-petal/70 px-3 py-1">
+                        {modality}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="rounded-3xl border border-plum/10 bg-white p-8 shadow-sm shadow-plum/5">
-              <p className="font-heading text-2xl text-plum">Psiquiatría</p>
-              <p className="mt-3 leading-relaxed text-ink/70">
-                Evaluación y seguimiento con especialistas, coordinado junto a tu proceso terapéutico.
-              </p>
-              <div className="mt-6 flex gap-2 text-xs font-medium text-plum">
-                <span className="rounded-full bg-petal/70 px-3 py-1">Presencial</span>
-                <span className="rounded-full bg-petal/70 px-3 py-1">Online</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Equipo */}
+      <section id="equipo" className="scroll-mt-20 bg-white py-20 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="text-center font-heading text-4xl text-ink">Nuestro equipo</h2>
+          <p className="mx-auto mt-4 max-w-xl text-center text-ink/70">
+            Especialistas en psiquiatría, psicología y terapia ocupacional, disponibles en la agenda en línea.
+          </p>
+          <div className="mt-14 grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4">
+            {TEAM.map((member) => (
+              <div key={member.name} className="text-center">
+                {member.photo ? (
+                  <Image
+                    src={member.photo}
+                    alt={member.name}
+                    width={224}
+                    height={224}
+                    className="mx-auto h-28 w-28 rounded-full border border-plum/10 object-cover"
+                  />
+                ) : (
+                  <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border border-plum/10 bg-petal/50 font-heading text-3xl text-plum">
+                    {initialsOf(member.name)}
+                  </div>
+                )}
+                <p className="mt-4 font-heading text-lg leading-snug text-ink">{member.name}</p>
+                <p className="mt-1 text-sm text-plum">{member.specialty}</p>
+                {member.bio && <p className="mt-2 text-sm leading-relaxed text-ink/65">{member.bio}</p>}
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Cómo funciona */}
-      <section id="como-funciona" className="scroll-mt-20 bg-white py-20 sm:py-24">
+      <section id="como-funciona" className="scroll-mt-20 py-20 sm:py-24">
         <div className="mx-auto max-w-5xl px-4">
           <h2 className="text-center font-heading text-4xl text-ink">Cómo funciona</h2>
           <div className="mt-14 grid gap-12 sm:grid-cols-3">

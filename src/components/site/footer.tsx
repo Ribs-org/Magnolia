@@ -10,7 +10,7 @@ export function SiteFooter() {
         <div>
           <p className="font-heading text-2xl">Centro de Salud {CENTER_NAME}</p>
           <p className="mt-3 text-sm text-petal/75">
-            Un espacio cálido para tu bienestar emocional, con psicología y psiquiatría presencial y online.
+            Un espacio cálido para tu bienestar emocional, con psiquiatría, psicología y terapia ocupacional presencial y online.
           </p>
         </div>
         <div>
