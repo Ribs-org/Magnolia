@@ -32,10 +32,8 @@ export function SiteFooter() {
         <div>
           <p className="font-heading text-lg">Horario de atención</p>
           <ul className="mt-3 space-y-2 text-sm text-petal/75">
-            <li>Lunes a viernes: 6:30 a 22:00</li>
-            <li>Sábado: 8:00 a 20:00</li>
-            <li>Feriados: 7:00 a 14:00</li>
-            <li>Domingo: cerrado</li>
+            <li>Lunes a viernes: 9:00 a 19:00</li>
+            <li>Sábado: 9:00 a 13:00</li>
           </ul>
           <Link
             href="/#agenda"
